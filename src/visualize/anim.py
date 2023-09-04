@@ -10,6 +10,12 @@ humanact12_kinematic_chain = [[0, 1, 4, 7, 10],
                               [9, 13, 16, 18, 20, 22],
                               [9, 14, 17, 19, 21, 23]]  # same as smpl
 
+mixamo_kinematic_chain = [[8, 9, 10, 11],
+                          [8, 12, 13, 14],
+                          [8, 1, 0],
+                          [1, 2, 3, 4],
+                          [1, 5, 6, 7]]
+
 smpl_kinematic_chain = humanact12_kinematic_chain
 
 mocap_kinematic_chain = [[0, 1, 2, 3],
@@ -104,6 +110,8 @@ def plot_3d_motion(motion, length, save_path, params, title="", interval=50):
         kinematic_tree = action2motion_kinematic_chain
     elif motion.shape[0] == 24:
         kinematic_tree = smpl_kinematic_chain
+    elif motion.shape[0] == 15:
+        kinematic_tree = mixamo_kinematic_chain
     else:
         kinematic_tree = None
 

@@ -96,7 +96,8 @@ class Dataset(torch.utils.data.Dataset):
             if getattr(self, "_load_joints3D", None) is not None:
                 # Locate the root joint of initial pose at origin
                 joints3D = self._load_joints3D(ind, frame_ix)
-                joints3D = joints3D - joints3D[0, 0, :]
+                # joints3D = joints3D - joints3D[0, 0, :]
+                joints3D = joints3D - joints3D[0, 8, :] # in mixamo pelvis is 8
                 ret = to_torch(joints3D)
                 if self.translation:
                     ret_tr = ret[:, 0, :]

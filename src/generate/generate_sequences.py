@@ -81,6 +81,7 @@ def generate_actions(beta, model, dataset, epoch, params, folder, num_frames=60,
                                         noise_diff_action=noise_diff_action,
                                         fact=fact)
 
+            # generation output is 6d rotations - convert to 3d rot using src/utils/rotation_conversions.py
             generation["output_xyz"] = model.rot2xyz(generation["output"],
                                                      generation["mask"], vertstrans=vertstrans,
                                                      beta=beta)
@@ -102,7 +103,7 @@ def generate_actions(beta, model, dataset, epoch, params, folder, num_frames=60,
                                         noise_same_action=noise_same_action,
                                         noise_diff_action=noise_diff_action,
                                         fact=fact)
-
+            # generation output shape - [60(num of motions), 25(joints), 6(rot 6d), 60]
             generation["output_xyz"] = model.rot2xyz(generation["output"],
                                                      generation["mask"], vertstrans=vertstrans,
                                                      beta=beta)

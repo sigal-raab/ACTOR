@@ -8,6 +8,15 @@ def get_dataset(name="ntu13"):
     elif name == "humanact12":
         from .humanact12poses import HumanAct12Poses
         return HumanAct12Poses
+    elif name == "humanact12_oneclass":
+        from .humanact12poses_oneclass import HumanAct12Poses
+        return HumanAct12Poses
+    elif name == "mixamo":
+        from .mixamoposes import MixamoPoses
+        return MixamoPoses
+    elif name == "mixamo_euler":
+        from .mixamoposes_euler import MixamoPoses_Euler
+        return MixamoPoses_Euler
 
 
 def get_datasets(parameters):

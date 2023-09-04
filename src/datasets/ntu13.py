@@ -13,7 +13,6 @@ from .dataset import Dataset
 # change 0 and 8
 action2motion_joints = [8, 1, 2, 3, 4, 5, 6, 7, 0, 9, 10, 11, 12, 13, 14, 21, 24, 38]
 
-
 class NTU13(Dataset):
     dataname = "ntu13"
 

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 from src.utils.get_model_and_data import get_model_and_data
 from src.parser.visualize import parser
-from .visualize import viz_epoch
+from src.visualize.visualize import viz_epoch
 
 import src.utils.fixseed  # noqa
 

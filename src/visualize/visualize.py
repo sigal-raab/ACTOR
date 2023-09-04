@@ -111,7 +111,8 @@ def viz_epoch(model, dataset, epoch, params, folder, writer=None):
     """ Generate & viz samples """
 
     # visualize with joints3D
-    model.outputxyz = True
+    model.outputxyz = False # I chagned to False
+    model.outputxyz = True # original
 
     print(f"Visualization of the epoch {epoch}")
 
@@ -129,8 +130,16 @@ def viz_epoch(model, dataset, epoch, params, folder, writer=None):
 
     num_classes = params["num_classes"]
 
-    # define some classes
-    classes = torch.randperm(num_classes)[:nats]
+    #~~
+    # define some classes (original
+    # classes = torch.randperm(num_classes)[:nats]
+
+    ### sample all from the same lable
+    classes = torch.tensor([0]*nats)
+
+    ### choose class for pretrained class distribution
+    classes = nats
+    #~~
 
     meandurations = torch.from_numpy(np.array([round(dataset.get_mean_length_label(cl.item()))
                                                for cl in classes]))
@@ -253,6 +262,106 @@ def viz_epoch(model, dataset, epoch, params, folder, writer=None):
     if writer is not None:
         writer.add_video(f"Video/Epoch {epoch}", frames.transpose(0, 3, 1, 2)[None], epoch, fps=params["fps"])
 
+def gen_epoch(model, dataset, epoch, params, folder, writer=None):
+    """ Generate & viz samples """
+
+    # visualize with joints3D
+    model.outputxyz = True # original
+
+    print(f"Visualization of the epoch {epoch}")
+
+    noise_same_action = params["noise_same_action"]
+    noise_diff_action = params["noise_diff_action"]
+    duration_mode = params["duration_mode"]
+    reconstruction_mode = params["reconstruction_mode"]
+    decoder_test = params["decoder_test"]
+
+    fact = params["fact_latent"]
+    figname = params["figname"].format(epoch)
+
+    nspa = params["num_samples_per_action"]
+    nats = params["num_actions_to_sample"]
+
+    num_classes = params["num_classes"]
+
+    # define some classes - original
+    # classes = torch.randperm(num_classes)[:nats]
+    # for sampling the same class
+    classes = torch.tensor([0]*nats)
+    # for sampling specific class
+    # classes = torch.tensor([nats])
+
+    meandurations = torch.from_numpy(np.array([round(dataset.get_mean_length_label(cl.item()))
+                                               for cl in classes]))
+
+    if duration_mode == "interpolate" or decoder_test == "diffduration":
+        points, step = np.linspace(-nspa, nspa, nspa, retstep=True)
+        points = np.round(10*points/step).astype(int)
+        gendurations = meandurations.repeat((nspa, 1)) + points[:, None]
+    else:
+        gendurations = meandurations.repeat((nspa, 1))
+
+    # extract the real samples
+    real_samples, mask_real, real_lengths = dataset.get_label_sample_batch(classes.numpy())
+    # to visualize directly
+
+    # Visualizaion of real samples
+    visualization = {"x": real_samples.to(model.device),
+                     "y": classes.to(model.device),
+                     "mask": mask_real.to(model.device),
+                     "lengths": real_lengths.to(model.device),
+                     "output": real_samples.to(model.device)}
+
+    # Visualizaion of real samples
+    if reconstruction_mode == "both":
+        reconstructions = {"tf": {"x": real_samples.to(model.device),
+                                  "y": classes.to(model.device),
+                                  "lengths": real_lengths.to(model.device),
+                                  "mask": mask_real.to(model.device),
+                                  "teacher_force": True},
+                           "ntf": {"x": real_samples.to(model.device),
+                                   "y": classes.to(model.device),
+                                   "lengths": real_lengths.to(model.device),
+                                   "mask": mask_real.to(model.device)}}
+    else:
+        reconstructions = {reconstruction_mode: {"x": real_samples.to(model.device),
+                                                 "y": classes.to(model.device),
+                                                 "lengths": real_lengths.to(model.device),
+                                                 "mask": mask_real.to(model.device),
+                                                 "teacher_force": reconstruction_mode == "tf"}}
+    print("Computing the samples poses..")
+
+    # generate the repr (joints3D/pose etc)
+    model.eval()
+    with torch.no_grad():
+        # Reconstruction of the real data
+        for mode in reconstructions:
+            model(reconstructions[mode])  # update reconstruction dicts
+        reconstruction = reconstructions[list(reconstructions.keys())[0]]
+
+        if decoder_test == "new":
+            # Generate the new data
+            batch_size = 64  # params['batch_size']
+            batches = []
+            num_batches = int(np.ceil(nspa/batch_size))
+            for b in range(num_batches):
+                should_generate = nspa - len(batches)*batch_size
+                batch_nspa = min(batch_size, should_generate)
+                begin = b*batch_size
+                end = min((b+1)*batch_size, nspa)
+                batch = model.generate(classes, gendurations[begin:end], nspa=batch_nspa,
+                                            noise_same_action=noise_same_action,
+                                            noise_diff_action=noise_diff_action,
+                                            fact=fact)
+                batches.append(batch)
+            output_xyz = [batch['output_xyz'] for batch in batches]
+            all_output_xyz = torch.vstack(output_xyz)
+            folder_path = f"data/HumanAct12Poses/generated/{'_'.join(params['checkpointname'].split('/')[-2:]).replace('.pth.tar', '')}"
+            os.makedirs(folder_path, exist_ok=True)
+            np.save(f'{folder_path}/ACTOR_res_humanact12_cls{nats}_smpls{nspa}', all_output_xyz.cpu())
+
+
+
 
 def viz_dataset(dataset, params, folder):
     """ Generate & viz samples """
@@ -270,7 +379,8 @@ def viz_dataset(dataset, params, folder):
                                                               params["sampling_step"])
 
     # define some classes
-    classes = torch.randperm(num_classes)[:nats]
+    # classes = torch.randperm(num_classes)[:nats]
+    classes = torch.tensor([0]*nats)
 
     allclasses = classes.repeat(nspa, 1).reshape(nspa*nats)
     # extract the real samples
@@ -293,7 +403,8 @@ def viz_dataset(dataset, params, folder):
                       "glob_rot": params["glob_rot"],
                       "glob": params["glob"],
                       "jointstype": params["jointstype"],
-                      "translation": params["translation"]}
+                      "translation": params["translation"],
+                      "vertstrans": True} ## I added this
 
     output = visualization["output"]
     visualization["output_xyz"] = rot2xyz(output.to(device),
